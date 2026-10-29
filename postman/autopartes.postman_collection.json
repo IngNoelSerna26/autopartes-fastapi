@@ -1,0 +1,1500 @@
+{
+  "info": {
+    "name": "Autopartes FastAPI",
+    "description": "Pruebas de la API de compatibilidad de autopartes.\n\nEjecuta la colección completa con el Collection Runner, en orden: cada petición guarda IDs en variables de colección que usan las siguientes. Los datos llevan un sufijo único (`runId`) para poder correrla varias veces, y la carpeta 6 borra lo que creó.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api"
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "vehicleId",
+      "value": ""
+    },
+    {
+      "key": "vehicleId2",
+      "value": ""
+    },
+    {
+      "key": "partId",
+      "value": ""
+    },
+    {
+      "key": "partSku",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Sistema",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Genera runId y partSku para esta corrida."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('runId', Date.now().toString());",
+                  "pm.collectionVariables.set('partSku', 'QA-' + pm.collectionVariables.get('runId'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Vehículos",
+      "item": [
+        {
+          "name": "Registrar vehículo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"make\": \"Nissan\",\n  \"model\": \"Versa\",\n  \"year\": 2020,\n  \"engine\": \"1.6L L4\",\n  \"trim\": \"QA {{runId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('vehicleId', pm.response.json().id);",
+                  "pm.test('Devuelve los datos enviados', () => pm.expect(pm.response.json().model).to.eql('Versa'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar segundo vehículo (2021)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"make\": \"Nissan\",\n  \"model\": \"Versa\",\n  \"year\": 2021,\n  \"engine\": \"1.6L L4\",\n  \"trim\": \"QA {{runId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('vehicleId2', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar vehículo duplicado → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"make\": \"Nissan\",\n  \"model\": \"Versa\",\n  \"year\": 2020,\n  \"engine\": \"1.6L L4\",\n  \"trim\": \"QA {{runId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar vehículo con año inválido → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"make\": \"Nissan\",\n  \"model\": \"Versa\",\n  \"year\": 1800\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar vehículos (filtro marca/modelo)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles?make=Nissan&model=Versa&limit=50&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles"
+              ],
+              "query": [
+                {
+                  "key": "make",
+                  "value": "Nissan"
+                },
+                {
+                  "key": "model",
+                  "value": "Versa"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"total >= 2\", () => pm.expect(pm.response.json().total >= 2).to.be.true);",
+                  "pm.test(\"Trae paginación\", () => pm.expect('items' in pm.response.json() && 'limit' in pm.response.json()).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Marcas (selector)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles/makes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles",
+                "makes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye Nissan\", () => pm.expect(pm.response.json().includes('Nissan')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modelos de una marca (selector)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles/models?make=Nissan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles",
+                "models"
+              ],
+              "query": [
+                {
+                  "key": "make",
+                  "value": "Nissan"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye Versa\", () => pm.expect(pm.response.json().includes('Versa')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Años de marca/modelo (selector)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles/years?make=Nissan&model=Versa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles",
+                "years"
+              ],
+              "query": [
+                {
+                  "key": "make",
+                  "value": "Nissan"
+                },
+                {
+                  "key": "model",
+                  "value": "Versa"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye 2020 y 2021\", () => pm.expect(pm.response.json().includes(2020) && pm.response.json().includes(2021)).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener vehículo por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles/{{vehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicleId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"ID correcto\", () => pm.expect(pm.response.json().id == pm.collectionVariables.get('vehicleId')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar vehículo (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles/{{vehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicleId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"engine\": \"1.6L L4 16V\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Motor actualizado', () => pm.expect(pm.response.json().engine).to.eql('1.6L L4 16V'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehículo inexistente → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles/999999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles",
+                "999999999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Autopartes",
+      "item": [
+        {
+          "name": "Registrar autoparte",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/parts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{partSku}}\",\n  \"name\": \"Banda serpentina\",\n  \"category\": \"Motor\",\n  \"manufacturer\": \"Gates\",\n  \"description\": \"Parte de prueba\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('partId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar SKU duplicado → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/parts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{partSku}}\",\n  \"name\": \"Otra\",\n  \"category\": \"Motor\",\n  \"manufacturer\": \"Gates\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar sin campos obligatorios → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/parts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"X\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar autopartes (búsqueda q)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts?q={{partSku}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{partSku}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"total = 1\", () => pm.expect(pm.response.json().total === 1).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar autopartes por categoría",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts?category=Motor&manufacturer=Gates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Motor"
+                },
+                {
+                  "key": "manufacturer",
+                  "value": "Gates"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Todas son Motor\", () => pm.expect(pm.response.json().items.every(p => p.category === 'Motor')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Categorías (selector)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "categories"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye Motor\", () => pm.expect(pm.response.json().includes('Motor')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener autoparte por SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts/sku/{{partSku}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "sku",
+                "{{partSku}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"ID correcto\", () => pm.expect(pm.response.json().id == pm.collectionVariables.get('partId')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener autoparte por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts/{{partId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "{{partId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar autoparte (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/parts/{{partId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "{{partId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Banda serpentina 6PK\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Nombre actualizado', () => pm.expect(pm.response.json().name).to.eql('Banda serpentina 6PK'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SKU inexistente → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts/sku/NO-EXISTE-0000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "sku",
+                "NO-EXISTE-0000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Compatibilidad",
+      "item": [
+        {
+          "name": "Asociar parte con vehículo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compatibility",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compatibility"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"part_id\": {{partId}},\n  \"vehicle_id\": {{vehicleId}},\n  \"notes\": \"Motor 1.6\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test(\"Guarda notas\", () => pm.expect(pm.response.json().notes === 'Motor 1.6').to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Asociar parte con segundo vehículo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compatibility",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compatibility"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"part_id\": {{partId}},\n  \"vehicle_id\": {{vehicleId2}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Asociación duplicada → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compatibility",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compatibility"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"part_id\": {{partId}},\n  \"vehicle_id\": {{vehicleId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Asociar con parte inexistente → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compatibility",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compatibility"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"part_id\": 999999999,\n  \"vehicle_id\": {{vehicleId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Búsqueda",
+      "item": [
+        {
+          "name": "Partes compatibles con un vehículo (por ID)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles/{{vehicleId}}/parts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicleId}}",
+                "parts"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye la parte\", () => pm.expect(pm.response.json().items.some(p => p.id == pm.collectionVariables.get('partId'))).to.be.true);",
+                  "pm.test(\"Incluye notas\", () => pm.expect(pm.response.json().items.some(p => p.notes === 'Motor 1.6')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehículos compatibles con una parte (por ID)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts/{{partId}}/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "{{partId}}",
+                "vehicles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"total = 2\", () => pm.expect(pm.response.json().total === 2).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar partes por marca/modelo/año",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/parts?make=Nissan&model=Versa&year=2020",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "parts"
+              ],
+              "query": [
+                {
+                  "key": "make",
+                  "value": "Nissan"
+                },
+                {
+                  "key": "model",
+                  "value": "Versa"
+                },
+                {
+                  "key": "year",
+                  "value": "2020"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye el SKU\", () => pm.expect(pm.response.json().items.some(p => p.sku === pm.collectionVariables.get('partSku'))).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar partes con filtro de categoría",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/parts?make=Nissan&model=Versa&year=2020&category=Motor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "parts"
+              ],
+              "query": [
+                {
+                  "key": "make",
+                  "value": "Nissan"
+                },
+                {
+                  "key": "model",
+                  "value": "Versa"
+                },
+                {
+                  "key": "year",
+                  "value": "2020"
+                },
+                {
+                  "key": "category",
+                  "value": "Motor"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"Todas son Motor\", () => pm.expect(pm.response.json().items.every(p => p.category === 'Motor')).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar partes sin año → 422",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/parts?make=Nissan&model=Versa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "parts"
+              ],
+              "query": [
+                {
+                  "key": "make",
+                  "value": "Nissan"
+                },
+                {
+                  "key": "model",
+                  "value": "Versa"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar vehículos por SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/search/vehicles?sku={{partSku}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "vehicles"
+              ],
+              "query": [
+                {
+                  "key": "sku",
+                  "value": "{{partSku}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"total = 2\", () => pm.expect(pm.response.json().total === 2).to.be.true);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Desasociar",
+      "item": [
+        {
+          "name": "Desasociar parte del segundo vehículo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/compatibility/{{partId}}/{{vehicleId2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compatibility",
+                "{{partId}}",
+                "{{vehicleId2}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desasociar de nuevo → 404",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/compatibility/{{partId}}/{{vehicleId2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compatibility",
+                "{{partId}}",
+                "{{vehicleId2}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "La parte queda con 1 vehículo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts/{{partId}}/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "{{partId}}",
+                "vehicles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"total = 1\", () => pm.expect(pm.response.json().total === 1).to.be.true);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Limpieza",
+      "item": [
+        {
+          "name": "Borrar vehículo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles/{{vehicleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicleId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cascada: la parte ya no tiene vehículos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts/{{partId}}/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "{{partId}}",
+                "vehicles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test(\"total = 0\", () => pm.expect(pm.response.json().total === 0).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar segundo vehículo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vehicles/{{vehicleId2}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{vehicleId2}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Borrar autoparte",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts/{{partId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "{{partId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Autoparte borrada → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parts/{{partId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parts",
+                "{{partId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

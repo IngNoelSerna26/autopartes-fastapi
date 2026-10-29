@@ -23,6 +23,6 @@ for router in (vehicles.router, parts.router, compatibility.router, search.route
     app.include_router(router, prefix="/api")
 
 
-@app.get("/health", tags=["Sistema"])
+@app.get("/api/health", tags=["Sistema"])
 def health():
     return {"status": "ok"}

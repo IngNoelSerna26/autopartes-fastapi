@@ -2,7 +2,7 @@
 
 API para gestionar la compatibilidad de autopartes con vehículos: qué partes le quedan a qué marca/modelo/año/motor, y viceversa.
 
-**Stack:** MySQL 8 · Python 3.12+ · FastAPI · SQLAlchemy 2 · Pydantic v2 · (próximamente) React + Vite + Axios.
+**Stack:** MySQL 8 · Python 3.12+ · FastAPI · SQLAlchemy 2 · Pydantic v2 · React 19 + Vite + Axios · Postman.
 
 ## Estructura
 
@@ -11,6 +11,12 @@ autopartes-fastapi/
 ├── database/
 │   ├── schema.sql          # Esquema MySQL (fuente de verdad: FKs, índices)
 │   └── seed.sql            # Datos de ejemplo
+├── postman/                # Colección de pruebas + guía (postman/README.md)
+├── frontend/               # React + Vite + Axios
+│   └── src/
+│       ├── api/client.js   # Instancia Axios y llamadas a la API
+│       ├── components/     # VehiclePartsFinder, PartVehiclesFinder
+│       └── App.jsx         # Pestañas: por vehículo / por autoparte
 └── backend/
     ├── .env.example        # Variables de conexión (copiar a .env)
     ├── requirements.txt
@@ -53,12 +59,25 @@ copy .env.example .env                    # y editar credenciales
 fastapi dev app/main.py                   # http://localhost:8000/docs
 ```
 
-Pruebas: `pytest` (dentro de `backend/`, no necesitan MySQL).
+```bash
+# 3. Frontend (en otra terminal, con el backend corriendo)
+cd frontend
+npm install
+npm run dev                               # http://localhost:5173
+```
+
+En desarrollo, Vite reenvía `/api` al backend en `localhost:8000`, así que no hace falta configurar CORS. Para apuntar a otra API, define `VITE_API_URL` en `frontend/.env` (ver `.env.example`).
+
+## Pruebas
+
+- **Backend:** `pytest` dentro de `backend/` (usa SQLite en memoria, no necesita MySQL).
+- **Postman:** importa `postman/autopartes.postman_collection.json` y córrela completa; la guía está en [`postman/README.md`](postman/README.md). Desde terminal: `npx newman run postman/autopartes.postman_collection.json`.
 
 ## Endpoints
 
 | Método | Ruta | Descripción |
 |---|---|---|
+| GET | `/api/health` | Estado de la API |
 | POST / GET | `/api/vehicles` | Registrar / listar vehículos (`make`, `model`, `year`, `limit`, `offset`) |
 | GET | `/api/vehicles/makes` · `/models?make=` · `/years?make=&model=` | Opciones para selectores en cascada |
 | GET / PATCH / DELETE | `/api/vehicles/{id}` | Detalle, edición, borrado |
